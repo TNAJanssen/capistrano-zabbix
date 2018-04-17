@@ -1,36 +1,46 @@
+namespace :load do
+  task :defaults do
+    set :zabbix_username,               ENV['CAPISTRANO_ZABBIX_USERNAME']
+    set :zabbix_password,               ENV['CAPISTRANO_ZABBIX_PASSWORD']
+    set :zabbix_url,                    ENV['CAPISTRANO_ZABBIX_URL']
+    set :zabbix_period,                 nil
+    set :zabbix_groupid,                nil
+    set :zabbix_auto_trigger,           true
+  end
+end
 
 namespace :zabbix do
   desc 'Find and transit possible JIRA issues'
   task :find_and_transit do |_t|
     on :all do |_host|
-      if fetch(:jira_validate_commit_messages)
+      if fetch(:zabbix_validate_commit_messages)
         info 'Finding commit messages'
-        commits = Capistrano::Jira::CommitFinder.new.find
+        commits = Capistrano::Zabbix::CommitFinder.new.find
       end
 
       info 'Looking for issues'
       begin
-        issues = Capistrano::Jira::IssueFinder.new.find
+        issues = Capistrano::Zabbix::IssueFinder.new.find
 
         issues.each do |issue|
           begin
-            if fetch(:jira_validate_commit_messages)
+            if fetch(:zabbix_validate_commit_messages)
               commit = commits.find { |c| c.message.include?(issue.key)}
               if commit
-                Capistrano::Jira::IssueTransiter.new(issue).transit
+                Capistrano::Zabbix::IssueTransiter.new(issue).transit
                 info "#{issue.key}\t\u{2713} Transited\tCommit: #{commit.hash}"
               else
                 info "#{issue.key}\t\u{21B7} Skipped"
               end
             else
-              Capistrano::Jira::IssueTransiter.new(issue).transit
+              Capistrano::Zabbix::IssueTransiter.new(issue).transit
               info "#{issue.key}\t\u{2713} Transited"
             end
-          rescue Capistrano::Jira::TransitionError => e
+          rescue Capistrano::Zabbix::TransitionError => e
             warn "#{issue.key}\t\u{2717} #{e.message}"
           end
         end
-      rescue Capistrano::Jira::FinderError => e
+      rescue Capistrano::Zabbix::FinderError => e
         error "#{e.class} #{e.message}"
       end
     end
@@ -40,8 +50,7 @@ namespace :zabbix do
   task :check do
     errored = false
     required_params =
-        %i[jira_username jira_password jira_site jira_project_key
-         jira_status_name jira_transition_name jira_comment_on_transition]
+        %i[zabbix_username zabbix_password zabbix_url zabbix_period zabbix_groupid zabbix_auto_trigger]
 
     puts '=> Required params'
     required_params.each do |param|
@@ -50,23 +59,23 @@ namespace :zabbix do
         puts '!!!!!! EMPTY !!!!!!'
         errored = true
       else
-        puts param == :jira_password ? '**********' : fetch(param)
+        puts param == :zabbix_password ? '**********' : fetch(param)
       end
     end
     raise StandardError, 'Not all required parameters are set' if errored
     puts '<= OK'
 
     puts '=> Checking connection'
-    projects = ::Capistrano::Jira.client.Project.all
+    hostgroups = ::Capistrano::Zabbix.client.hostgroup.get
     puts '<= OK'
 
     puts '=> Checking for given project key'
-    exist = projects.any? { |project| project.key == fetch(:jira_project_key) }
+    exist = hostgroups.any? { |hostgroup| hostgroup.groupid == fetch(:zabbix_groupid) }
     unless exist
-      raise StandardError, "Project #{fetch(:jira_project_key)} not found"
+      raise StandardError, "Host group #{fetch(:zabbix_groupid)} not found"
     end
     puts '<= OK'
   end
 
-  after 'deploy:finished', 'jira:find_and_transit'
+  # after 'deploy:finished', 'zabbix:find_and_transit'
 end
