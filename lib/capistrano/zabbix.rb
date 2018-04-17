@@ -8,7 +8,7 @@ module Capistrano
     def self.client
       ZabbixApi.connect(user: fetch(:zabbix_username),
                          password: fetch(:zabbix_password),
-                         url: fetch(:zabbix_url), debug: true)
+                         url: fetch(:zabbix_url))
     end
   end
 end
