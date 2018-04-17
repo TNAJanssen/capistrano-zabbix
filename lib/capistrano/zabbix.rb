@@ -5,7 +5,7 @@ require 'zabbixapi'
 module Capistrano
   module Zabbix
     def self.client
-      ZabbixApi.connect(username: fetch(:zabbix_username),
+      ZabbixApi.connect(user: fetch(:zabbix_username),
                          password: fetch(:zabbix_password),
                          url: fetch(:zabbix_url))
     end
