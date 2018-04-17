@@ -5,7 +5,6 @@ namespace :load do
     set :zabbix_url,                    ENV['CAPISTRANO_ZABBIX_URL']
     set :zabbix_period,                 900
     set :zabbix_groupid,                nil
-    set :zabbix_auto_trigger,           true
   end
 end
 
@@ -63,11 +62,9 @@ namespace :zabbix do
   end
 end
 
-if fetch(:zabbix_auto_trigger)
-  before 'deploy:started',         'zabbix:create'
-  after 'deploy:published',        'zabbix:delete'
-  after 'deploy:failed',           'zabbix:delete'
-end
+before 'deploy:started',         'zabbix:create'
+after 'deploy:published',        'zabbix:delete'
+after 'deploy:failed',           'zabbix:delete'
 
 def zm_api
   zbx = ZabbixMaintenance.new(::Capistrano::Zabbix.client)
