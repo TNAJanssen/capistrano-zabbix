@@ -1,4 +1,4 @@
-source 'http://rubygems.org'
+source 'https://rubygems.org'
 
-gem 'zabbixapi', ['>=3.2.0']
-gem 'capistrano', '~> 3.0'
+# Specify your gem's dependencies in capistrano-jira.gemspec
+gemspec
