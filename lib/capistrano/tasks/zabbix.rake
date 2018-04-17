@@ -3,47 +3,20 @@ namespace :load do
     set :zabbix_username,               ENV['CAPISTRANO_ZABBIX_USERNAME']
     set :zabbix_password,               ENV['CAPISTRANO_ZABBIX_PASSWORD']
     set :zabbix_url,                    ENV['CAPISTRANO_ZABBIX_URL']
-    set :zabbix_period,                 nil
+    set :zabbix_period,                 900
     set :zabbix_groupid,                nil
     set :zabbix_auto_trigger,           true
   end
 end
 
 namespace :zabbix do
-  desc 'Find and transit possible JIRA issues'
-  task :find_and_transit do |_t|
-    on :all do |_host|
-      if fetch(:zabbix_validate_commit_messages)
-        info 'Finding commit messages'
-        commits = Capistrano::Zabbix::CommitFinder.new.find
-      end
-
-      info 'Looking for issues'
-      begin
-        issues = Capistrano::Zabbix::IssueFinder.new.find
-
-        issues.each do |issue|
-          begin
-            if fetch(:zabbix_validate_commit_messages)
-              commit = commits.find { |c| c.message.include?(issue.key)}
-              if commit
-                Capistrano::Zabbix::IssueTransiter.new(issue).transit
-                info "#{issue.key}\t\u{2713} Transited\tCommit: #{commit.hash}"
-              else
-                info "#{issue.key}\t\u{21B7} Skipped"
-              end
-            else
-              Capistrano::Zabbix::IssueTransiter.new(issue).transit
-              info "#{issue.key}\t\u{2713} Transited"
-            end
-          rescue Capistrano::Zabbix::TransitionError => e
-            warn "#{issue.key}\t\u{2717} #{e.message}"
-          end
-        end
-      rescue Capistrano::Zabbix::FinderError => e
-        error "#{e.class} #{e.message}"
-      end
-    end
+  desc 'Create maintenance'
+  task :create_maintenance do |_t|
+    ZabbixMaintenance.client.maintenance.create(
+        :name => 'capistrano auto maintenance',
+        :period => fetch(:zabbix_period),
+        :groupids => [ fetch(:zabbix_groupid) ]
+    )
   end
 
   desc 'Check Zabbix setup'
@@ -66,16 +39,36 @@ namespace :zabbix do
     puts '<= OK'
 
     puts '=> Checking connection'
-    hostgroups = ::Capistrano::Zabbix.client.hostgroup.get
+    hostgroups = ::Capistrano::Zabbix.client.hostgroups.get(groupids: fetch(:zabbix_groupid))
     puts '<= OK'
 
-    puts '=> Checking for given project key'
-    exist = hostgroups.any? { |hostgroup| hostgroup.groupid == fetch(:zabbix_groupid) }
+    puts '=> Checking for given host group'
+    exist = hostgroups.any? { |hostgroup| Integer(hostgroup["groupid"]) == Integer(fetch(:zabbix_groupid)) }
     unless exist
       raise StandardError, "Host group #{fetch(:zabbix_groupid)} not found"
     end
     puts '<= OK'
   end
 
-  # after 'deploy:finished', 'zabbix:find_and_transit'
+  desc 'Create maintenance in Zabbix'
+  task :create do
+    zm_api.create_or_replace [fetch(:zabbix_groupid)], period: fetch(:zabbix_period)
+    puts 'Maintenance created'
+  end
+
+  desc 'Delete maintenance in Zabbix'
+  task :delete do
+    zm_api.delete(id: zm_api.maint_id)
+    puts 'Maintenance deleted'
+  end
+end
+
+if fetch(:zabbix_auto_trigger)
+  before 'deploy:update',         'zabbix:create'
+  after 'deploy:restart',         'zabbix:delete'
+end
+
+def zm_api
+  zbx = ZabbixMaintenance.new(::Capistrano::Zabbix.client)
+  set(:zbx_handle, zbx)
 end

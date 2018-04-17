@@ -1,5 +1,6 @@
 require 'active_support'
-# require 'capistrano/jira/version'
+require 'capistrano/zabbix/version'
+require 'capistrano/zabbix/maintenance'
 require 'zabbixapi'
 
 module Capistrano
@@ -7,7 +8,7 @@ module Capistrano
     def self.client
       ZabbixApi.connect(user: fetch(:zabbix_username),
                          password: fetch(:zabbix_password),
-                         url: fetch(:zabbix_url))
+                         url: fetch(:zabbix_url), debug: true)
     end
   end
 end
