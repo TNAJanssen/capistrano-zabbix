@@ -64,8 +64,9 @@ namespace :zabbix do
 end
 
 if fetch(:zabbix_auto_trigger)
-  before 'deploy:update',         'zabbix:create'
-  after 'deploy:restart',         'zabbix:delete'
+  before 'deploy:started',         'zabbix:create'
+  after 'deploy:published',        'zabbix:delete'
+  after 'deploy:failed',           'zabbix:delete'
 end
 
 def zm_api
