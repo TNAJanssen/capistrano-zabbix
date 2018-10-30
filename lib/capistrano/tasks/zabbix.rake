@@ -69,7 +69,7 @@ namespace :zabbix do
 end
 
 before 'deploy:starting',         'zabbix:create'
-after 'deploy:finishing',        'zabbix:close'
+after 'deploy:finishing',        'zabbix:delete'
 
 def zm_api
   zbx = ZabbixMaintenance.new(::Capistrano::Zabbix.client)
