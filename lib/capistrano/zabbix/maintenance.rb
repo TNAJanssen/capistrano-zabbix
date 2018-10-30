@@ -33,7 +33,7 @@ class ZabbixMaintenance
         active_since: Time.now.to_i - 300,
         active_till: Time.now.to_i + 1800,
         groupids: groupids,
-        timeperiods: [{ period: period , start_time: Time.now.to_i - 300}]
+        timeperiods: [{ period: period , start_date: 5.minutes.ago.to_i}]
     }
     ret = @zbx.maintenance.create(maint_params)
     @id = ret
