@@ -55,6 +55,12 @@ namespace :zabbix do
     puts 'Maintenance created'
   end
 
+  desc 'Close maintenance in Zabbix'
+  task :delete do
+    zm_api.close(id: zm_api.maint_id)
+    puts 'Maintenance close'
+  end
+
   desc 'Delete maintenance in Zabbix'
   task :delete do
     zm_api.delete(id: zm_api.maint_id)
@@ -62,8 +68,8 @@ namespace :zabbix do
   end
 end
 
-before 'deploy:started',         'zabbix:create'
-after 'deploy:finishing',        'zabbix:delete'
+before 'deploy:starting',         'zabbix:create'
+after 'deploy:finishing',        'zabbix:close'
 
 def zm_api
   zbx = ZabbixMaintenance.new(::Capistrano::Zabbix.client)

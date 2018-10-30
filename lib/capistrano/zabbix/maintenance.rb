@@ -30,14 +30,26 @@ class ZabbixMaintenance
   def create(groupids, period: 3600)
     maint_params = {
         name: @maint_title,
-        active_since: Time.now.to_i - 200,
-        active_till: Time.now.to_i + 866_00,
+        active_since: Time.now.to_i - 300,
+        active_till: Time.now.to_i + 1800,
         groupids: groupids,
         timeperiods: [{ period: period }]
     }
     ret = @zbx.maintenance.create(maint_params)
     @id = ret
   end
+
+  def close(id: @id)
+    ret = @zbx.maintenance.update({
+      maintenanceid: id,
+      active_till: Time.now.to_i,
+    })
+    unless ret == id
+      fail "Maintenance id:#{id} has not been deleted"
+    end
+    true
+  end
+
 
   def delete(id: @id)
     ret = @zbx.maintenance.delete(id)
