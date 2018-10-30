@@ -56,7 +56,7 @@ namespace :zabbix do
   end
 
   desc 'Close maintenance in Zabbix'
-  task :delete do
+  task :close do
     zm_api.close(id: zm_api.maint_id)
     puts 'Maintenance close'
   end
